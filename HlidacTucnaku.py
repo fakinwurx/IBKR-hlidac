@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QApplication, QWidget, QVBoxLayout, QLabel, QPushBut
 from ib_insync import IB, Stock, Option, Position
 import openai
 from datetime import datetime
+import sqlite3
 
 # OpenAI API klíč
 # Zde vložte svůj OpenAI API klíč.
@@ -33,7 +34,19 @@ class DeltaNeutralApp(QWidget):
         left_layout = QVBoxLayout()
 
         # Upper window with open positions
-        self.positions_label = QLabel('Otevřené pozice:')
+        self.positions_label = QTextEdit()
+        self.positions_label.setReadOnly(True)
+        self.positions_label.setMaximumHeight(40)  # Set maximum height
+        self.positions_label.setMinimumHeight(20)  # Set minimum height
+        self.positions_label.setPlainText('Otevřené pozice:')
+        self.positions_label.setStyleSheet("""
+            QTextEdit {
+                background-color: transparent;
+                border: none;
+                font-size: 12pt;
+                font-weight: bold;
+            }
+        """)
         self.positions_table = QTableWidget()
         self.positions_table.setColumnCount(3)  # Ticker, Quantity, Value
         self.positions_table.setHorizontalHeaderLabels(['Ticker', 'Množství', 'Hodnota'])
@@ -42,6 +55,42 @@ class DeltaNeutralApp(QWidget):
         # Bottom window with selected position details
         self.details_label = QLabel('Detaily pozice:')
         self.details_text = QLabel('Vyberte pozici pro zobrazení detailů.')
+        
+        # Add summary table for trader2 data
+        self.summary_label = QLabel('Souhrn obchodů:')
+        self.summary_table = QTableWidget()
+
+        self.summary_table.setColumnCount(4)
+        self.summary_table.setHorizontalHeaderLabels([
+            'Symbol', 'Net Cash', 'Čistá hodnota', 'FX PnL'
+        ])
+        # Adjust column widths
+        header = self.summary_table.horizontalHeader()
+        header.setSectionResizeMode(0, header.ResizeMode.ResizeToContents)  # Symbol
+        header.setSectionResizeMode(1, header.ResizeMode.ResizeToContents)  # Net Cash
+        header.setSectionResizeMode(2, header.ResizeMode.ResizeToContents)  # Net Cash In Base
+        header.setSectionResizeMode(3, header.ResizeMode.ResizeToContents)  # FX PnL
+        
+        # Add trade history table
+        self.trade_history_label = QLabel('Historie obchodů:')
+        self.trade_history_table = QTableWidget()
+        self.trade_history_table.setColumnCount(10)  # Increased to 10 columns
+        self.trade_history_table.setHorizontalHeaderLabels([
+            'Datum', 'Symbol', 'Popis', 'Množství', 'Komise', 
+            'Net Cash', 'Čistá hodnota', 'Realizovaný PnL', 'Kapitálový PnL', 'FX PnL'
+        ])
+        # Adjust column widths
+        header = self.trade_history_table.horizontalHeader()
+        header.setSectionResizeMode(0, header.ResizeMode.ResizeToContents)  # Date
+        header.setSectionResizeMode(1, header.ResizeMode.ResizeToContents)  # Symbol
+        header.setSectionResizeMode(2, header.ResizeMode.Stretch)  # Description
+        header.setSectionResizeMode(3, header.ResizeMode.ResizeToContents)  # Quantity
+        header.setSectionResizeMode(4, header.ResizeMode.ResizeToContents)  # Commission
+        header.setSectionResizeMode(5, header.ResizeMode.ResizeToContents)  # Net Cash
+        header.setSectionResizeMode(6, header.ResizeMode.ResizeToContents)  # Net Cash In Base
+        header.setSectionResizeMode(7, header.ResizeMode.ResizeToContents)  # Realized PnL
+        header.setSectionResizeMode(8, header.ResizeMode.ResizeToContents)  # Capital Gains PnL
+        header.setSectionResizeMode(9, header.ResizeMode.ResizeToContents)  # FX PnL
 
         # Layout for buttons
         button_layout = QHBoxLayout()
@@ -56,6 +105,10 @@ class DeltaNeutralApp(QWidget):
         left_layout.addWidget(self.positions_table)
         left_layout.addWidget(self.details_label)
         left_layout.addWidget(self.details_text)
+        left_layout.addWidget(self.summary_label)
+        left_layout.addWidget(self.summary_table)
+        left_layout.addWidget(self.trade_history_label)
+        left_layout.addWidget(self.trade_history_table)
         left_layout.addLayout(button_layout)
 
         # Right side layout for OpenAI Chat
@@ -94,46 +147,35 @@ class DeltaNeutralApp(QWidget):
         self.setLayout(main_layout)
 
     def load_positions(self):
-        """Load positions from IBKR account and display them."""
+        """Load positions from IBFLEXQUERY.db database and display them."""
         try:
-            # Connect to IBKR
-            self.ib.connect('127.0.0.1', 7497, clientId=1)
+            # Connect to the database
+            conn = sqlite3.connect('data/IBFlexQuery.db')
+            cursor = conn.cursor()
 
-            # Get open positions
-            positions = self.ib.positions()
+            # Query to get open positions (where dateclose is empty)
+            cursor.execute('''
+                SELECT Ticker, DateOpen, DateClose 
+                FROM DN 
+                WHERE DateClose IS NULL OR DateClose = ''
+            ''')
             
-            # Qualify each contract to ensure all necessary fields are populated, like exchange
-            qualified_positions = []
-            for pos in positions:
-                try:
-                    # Attempt to qualify the contract. This can be blocking.
-                    # For performance, consider doing this in a separate thread if many positions.
-                    # For now, let's keep it synchronous.
-                    self.ib.qualifyContracts(pos.contract)
-                    qualified_positions.append(pos)
-                except Exception as qc_e:
-                    print(f"Varování: Nelze kvalifikovat kontrakt {pos.contract.symbol}: {qc_e}")
-                    # If qualification fails, still add the original position, but it might cause issues later
-                    qualified_positions.append(pos) 
+            positions = cursor.fetchall()
             
-            self.positions = qualified_positions
-
             # Populate the positions table
-            self.positions_table.setRowCount(len(self.positions))
-            for i, position in enumerate(self.positions):
-                ticker = position.contract.symbol
-                qty = position.position
-
-                # Get the current market price using reqMktData
-                market_price = self.get_market_price(position.contract)
-
+            self.positions_table.setRowCount(len(positions))
+            for i, position in enumerate(positions):
+                ticker, date_open, date_close = position
+                
                 # Add the row to the table
-                self.positions_table.setItem(i, 0, QTableWidgetItem(ticker))
-                self.positions_table.setItem(i, 1, QTableWidgetItem(str(qty)))
-                self.positions_table.setItem(i, 2, QTableWidgetItem(str(market_price)))
+                self.positions_table.setItem(i, 0, QTableWidgetItem(str(ticker)))
+                self.positions_table.setItem(i, 1, QTableWidgetItem(str(date_open)))
+                self.positions_table.setItem(i, 2, QTableWidgetItem(str(date_close) if date_close else ''))
+
+            conn.close()
+            
         except Exception as e:
             self.chat_output.setText(f"Chyba při načítání pozic: {e}")
-
 
     def get_market_price(self, contract):
         """Get the market price for the contract using reqMktData."""
@@ -147,99 +189,129 @@ class DeltaNeutralApp(QWidget):
     def on_position_click(self, row, column):
         """Handle the selection of a position and display its details."""
         ticker = self.positions_table.item(row, 0).text()
-        selected_position = None
-
-        # Find the selected position
-        for position in self.positions:
-            if position.contract.symbol == ticker:
-                selected_position = position
-                break
-
-        if selected_position:
-            self.display_position_details(selected_position)
+        date_open = self.positions_table.item(row, 1).text()
+        
+        # Create a simple position object with just the ticker
+        position = {'ticker': ticker, 'date_open': date_open}
+        
+        # Display the details
+        self.display_position_details(position)
 
     def display_position_details(self, position):
         """Display details for a selected position."""
-        ticker = position.contract.symbol
-        contract = position.contract
+        ticker = position['ticker']
+        date_open = position['date_open']
 
         details_text = f"Ticker: {ticker}\n"
-        details_text += f"Množství: {position.position}\n"
-
-        # Collect PnL from sold options
-        pnl = 0
-        details_text += f"\nProdané opce a PnL:\n"
-        for option in self.sold_options:
-            if option['ticker'] == ticker:
-                details_text += f"Symbol opce: {option['symbol']}\n"
-                details_text += f"Vybraná prémie: {option['premium']}\n"
-                pnl += option['premium']
-
-        details_text += f"Celkové PnL z prodaných opcí: {pnl}\n"
-
-        # Get the options details from IBKR
-        # Note: reqContractDetails expects a Contract object, not an Option object directly.
-        # This part might need refinement based on how you intend to get option details
-        # related to the underlying stock position.
-        # For now, let's assume 'contract' here refers to the underlying stock.
-        # To get option details for the underlying, you'd typically search for options
-        # associated with that underlying. This part of the original code might need
-        # a more robust implementation if you want to list *all* options for the underlying.
-        
-        try:
-            # If position.contract is an Option, this will work.
-            # If position.contract is a Stock, it will return details for the stock.
-            contract_details = self.ib.reqContractDetails(contract)
-            
-            if contract_details and isinstance(contract_details[0].contract, Option):
-                details_text += f"\nInformace o opcích (pro tuto konkrétní pozici opce):\n"
-                for detail in contract_details:
-                    option_contract = detail.contract
-                    details_text += f"Symbol opce: {option_contract.symbol}\n"
-                    details_text += f"Strike: {option_contract.strike}\n"
-                    details_text += f"Expirace: {option_contract.lastTradeDate if hasattr(option_contract, 'lastTradeDate') else 'Data nejsou k dispozici'}\n"
-                    details_text += f"IV při nákupu: {self.calculate_IV(option_contract)}\n"
-                    details_text += f"30denní IV: {self.get_30_day_IV(option_contract)}\n"
-            elif isinstance(contract, Stock):
-                details_text += f"\nInformace o opcích pro podkladovou akcii ({ticker}):\n"
-                # Example of how to get option chain for a stock:
-                # This section demonstrates fetching option parameters and then details for a few options.
-                # In a real application, you might filter these more precisely.
-                contracts_params = self.ib.reqSecDefOptParams(underlyingSymbol=ticker, futFopExchange='',
-                                                      underlyingConId=contract.conId, genericTickList='')
-                if contracts_params:
-                    # For simplicity, let's just pick the first expiration and a few strikes
-                    first_contract_param = contracts_params[0]
-                    expirations = first_contract_param.expirations
-                    strikes = first_contract_param.strikes
-
-                    if expirations and strikes:
-                        # Limit to a few options for display purposes to avoid too much data
-                        for i, strike in enumerate(strikes[:3]): # Take first 3 strikes
-                            for right in ['C', 'P']: # Calls and Puts
-                                try:
-                                    # Explicitly set exchange to 'SMART' when creating the Option contract
-                                    option_contract = Option(ticker, expirations[0], strike, right, 'SMART', exchange='SMART')
-                                    self.ib.qualifyContracts(option_contract) # Qualify the newly created contract
-                                    details_text += f"  Symbol opce: {option_contract.symbol}\n"
-                                    details_text += f"  Strike: {option_contract.strike}\n"
-                                    details_text += f"  Expirace: {option_contract.lastTradeDate if hasattr(option_contract, 'lastTradeDate') else 'N/A'}\n"
-                                    details_text += f"  IV při nákupu: {self.calculate_IV(option_contract)}\n"
-                                    details_text += f"  30denní IV: {self.get_30_day_IV(option_contract)}\n"
-                                except Exception as e:
-                                    details_text += f"  Chyba při získávání detailů opce {ticker} {expirations[0]} {strike} {right}: {e}\n"
-                    else:
-                        details_text += "  Žádné dostupné expirace nebo strike ceny pro opce.\n"
-                else:
-                    details_text += "  Žádné parametry opcí nalezeny pro tuto akcii.\n"
-            else:
-                details_text += f"\nPro tuto pozici nejsou k dispozici žádné konkrétní detaily opcí (může se jednat o jiný typ kontraktu než akcie nebo opce).\n"
-
-        except Exception as e:
-            details_text += f"\nChyba při načítání detailů kontraktu: {e}\n"
-        
-        # Update details in the UI
+        details_text += f"Datum otevření: {date_open}\n"
         self.details_text.setText(details_text)
+
+        conn = None
+        try:
+            # Add summary data from trader2
+            conn = sqlite3.connect('data/IBFlexQuery.db')
+            cursor = conn.cursor()
+            
+            # Debug print
+            print(f"Querying trader2 for ticker: {ticker}, date: {date_open}")
+            
+            # First, let's check what data exists for this ticker
+            cursor.execute('''
+                SELECT 
+                    "tradeDate",
+                    "underlyingSymbol",
+                    "Totalquantity",
+                    "TotalNetCash",
+                    "TotalNetCashInBase",
+                    "TotalFxPnl"
+                FROM trader2
+                WHERE "tradeDate" >= ?
+                AND "underlyingSymbol" = ?
+                ORDER BY "tradeDate" DESC
+                LIMIT 5
+            ''', (date_open, ticker))
+            
+            debug_data = cursor.fetchall()
+            print(f"Debug data from trader2: {debug_data}")
+            
+            # Now try the summary query
+            cursor.execute('''
+                SELECT
+                    underlyingSymbol,
+                    ROUND(SUM("TotalNetCash"), 2) AS TotalNetCash,
+                    ROUND(SUM("TotalNetCashInBase"), 2) AS TotalNetCashInBase,
+                    ROUND(SUM("TotalFxPnl"), 2) AS TotalFxPnl
+                FROM trader2
+                WHERE "tradeDate" >= ?
+                AND "underlyingSymbol" = ?
+                AND "Totalquantity" = 0
+                GROUP BY "underlyingSymbol"
+            ''', (date_open, ticker))
+            
+            summary = cursor.fetchone()
+            print(f"Summary data: {summary}")  # Debug print
+            
+            # Clear and populate the summary table
+            self.summary_table.setRowCount(1 if summary else 0)
+            if summary:
+                symbol, net_cash, net_cash_base, fx_pnl = summary
+                self.summary_table.setItem(0, 0, QTableWidgetItem(str(symbol)))
+                self.summary_table.setItem(0, 1, QTableWidgetItem(str(net_cash)))
+                self.summary_table.setItem(0, 2, QTableWidgetItem(str(net_cash_base)))
+                self.summary_table.setItem(0, 3, QTableWidgetItem(str(fx_pnl)))
+            else:
+                # If no data found, show a message
+                self.summary_table.setRowCount(1)
+                self.summary_table.setItem(0, 0, QTableWidgetItem("Žádná data k zobrazení"))
+            
+            # Add trade details from IBFlexQueryCZK
+            cursor.execute('''
+                SELECT
+                    "tradeDate",
+                    "underlyingSymbol",
+                    "description",
+                    SUM("quantity") as TotalQuantity,
+                    ROUND(SUM("ibCommission"), 2) AS TotalIbCommission,
+                    ROUND(SUM("netCash"), 2) AS TotalNetCash,
+                    ROUND(SUM("netCashInBase"), 2) AS TotalNetCashInBase,
+                    ROUND(SUM("fifoPnlRealized"), 2) AS TotalFifoPnlRealized,
+                    ROUND(SUM("capitalGainsPnl"), 2) AS TotalCapitalGainsPnl,
+                    ROUND(SUM("fxPnl"), 2) AS TotalFxPnl
+                FROM "IBFlexQueryCZK"
+                WHERE "tradeDate" >= ?
+                AND "underlyingSymbol" = ?
+                GROUP BY "description", "underlyingSymbol"
+                ORDER BY "tradeDate"
+            ''', (date_open, ticker))
+            
+            trades = cursor.fetchall()
+            
+            # Clear and populate the trade history table
+            self.trade_history_table.setRowCount(len(trades))
+            for i, trade in enumerate(trades):
+                trade_date, symbol, description, quantity, commission, net_cash, net_cash_base, fifo_pnl, cap_gains_pnl, fx_pnl = trade
+                
+                # Add each value to the table
+                self.trade_history_table.setItem(i, 0, QTableWidgetItem(str(trade_date)))
+                self.trade_history_table.setItem(i, 1, QTableWidgetItem(str(symbol)))
+                self.trade_history_table.setItem(i, 2, QTableWidgetItem(str(description)))
+                self.trade_history_table.setItem(i, 3, QTableWidgetItem(str(quantity)))
+                self.trade_history_table.setItem(i, 4, QTableWidgetItem(str(commission)))
+                self.trade_history_table.setItem(i, 5, QTableWidgetItem(str(net_cash)))
+                self.trade_history_table.setItem(i, 6, QTableWidgetItem(str(net_cash_base)))
+                self.trade_history_table.setItem(i, 7, QTableWidgetItem(str(fifo_pnl)))
+                self.trade_history_table.setItem(i, 8, QTableWidgetItem(str(cap_gains_pnl)))
+                self.trade_history_table.setItem(i, 9, QTableWidgetItem(str(fx_pnl)))
+                
+        except Exception as e:
+            print(f"Error: {e}")  # Debug print
+            self.summary_table.setRowCount(1)
+            self.summary_table.setItem(0, 0, QTableWidgetItem(f"Chyba při načítání dat: {e}"))
+            self.trade_history_table.setRowCount(1)
+            self.trade_history_table.setItem(0, 0, QTableWidgetItem(f"Chyba při načítání dat: {e}"))
+        finally:
+            if conn:
+                conn.close()
 
     def black_scholes_call(self, S, K, T, r, sigma):
         """Calculates the Black-Scholes price of a call option."""
