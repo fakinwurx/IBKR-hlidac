@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="IBFlexQuery.db" readonly="0" foreign_keys="1" case_sensitive_like="0" temp_store="0" wal_autocheckpoint="1000" synchronous="2"/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="10588"/><column_width id="4" width="0"/><expanded_item id="0" parent="1"/><expanded_item id="1" parent="1"/><expanded_item id="2" parent="1"/><expanded_item id="3" parent="1"/></tab_structure><tab_browse><table title="trader2" custom_title="0" dock_id="2" table="4,7:maintrader2"/><dock_state state="000000ff00000000fd0000000100000002000005bb00000410fc0100000002fb000000160064006f0063006b00420072006f00770073006500310100000000000005cc0000000000000000fb000000160064006f0063006b00420072006f00770073006500320100000000000005bb0000011e00ffffff000005bb0000000000000004000000040000000800000008fc00000000"/><default_encoding codec=""/><browse_table_settings><table schema="main" name="DN" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="71"/><column index="2" value="43"/><column index="3" value="71"/></column_widths><filter_values/><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="IBFlexQueryCZK" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="38" mode="1"/></sort><column_widths><column index="1" value="71"/><column index="2" value="127"/><column index="3" value="43"/><column index="4" value="58"/><column index="5" value="87"/><column index="6" value="91"/><column index="7" value="175"/><column index="8" value="231"/><column index="9" value="79"/><column index="10" value="103"/><column index="11" value="95"/><column index="12" value="95"/><column index="13" value="103"/><column index="14" value="96"/><column index="15" value="99"/><column index="16" value="110"/><column index="17" value="128"/><column index="18" value="159"/><column index="19" value="42"/><column index="20" value="62"/><column index="21" value="47"/><column index="22" value="71"/><column index="23" value="87"/><column index="24" value="47"/><column index="25" value="71"/><column index="26" value="129"/><column index="27" value="127"/><column index="28" value="71"/><column index="29" value="106"/><column index="30" value="101"/><column index="31" value="71"/><column index="32" value="56"/><column index="33" value="71"/><column index="34" value="79"/><column index="35" value="79"/><column index="36" value="40"/><column index="37" value="103"/><column index="38" value="137"/><column index="39" value="119"/><column index="40" value="135"/><column index="41" value="65"/><column index="42" value="118"/><column index="43" value="40"/><column index="44" value="119"/><column index="45" value="119"/><column index="46" value="111"/><column index="47" value="103"/><column index="48" value="71"/><column index="49" value="91"/><column index="50" value="90"/><column index="51" value="76"/><column index="52" value="75"/><column index="53" value="91"/><column index="54" value="95"/><column index="55" value="49"/><column index="56" value="95"/><column index="57" value="191"/><column index="58" value="255"/><column index="59" value="127"/><column index="60" value="113"/><column index="61" value="79"/><column index="62" value="300"/><column index="63" value="127"/><column index="64" value="91"/><column index="65" value="140"/><column index="66" value="86"/><column index="67" value="95"/><column index="68" value="80"/><column index="69" value="89"/><column index="70" value="110"/><column index="71" value="67"/><column index="72" value="57"/><column index="73" value="69"/><column index="74" value="70"/><column index="75" value="83"/><column index="76" value="82"/><column index="78" value="55"/><column index="79" value="55"/></column_widths><filter_values><column index="7" value="AAL 23MAY25 13.5 C"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="trader" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="91"/><column index="2" value="175"/><column index="3" value="231"/><column index="4" value="110"/><column index="5" value="62"/><column index="6" value="47"/><column index="7" value="71"/><column index="8" value="47"/><column index="9" value="71"/><column index="10" value="127"/><column index="11" value="71"/><column index="12" value="56"/><column index="13" value="71"/><column index="14" value="79"/><column index="15" value="79"/><column index="16" value="40"/><column index="17" value="103"/><column index="18" value="137"/><column index="19" value="118"/><column index="20" value="40"/><column index="21" value="119"/><column index="22" value="49"/></column_widths><filter_values><column index="1" value="aal"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="trader1" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort/><column_widths><column index="1" value="91"/><column index="2" value="87"/><column index="3" value="175"/><column index="4" value="231"/><column index="5" value="110"/><column index="6" value="62"/><column index="7" value="47"/><column index="8" value="71"/><column index="9" value="47"/><column index="10" value="71"/><column index="11" value="159"/><column index="12" value="87"/><column index="13" value="56"/><column index="14" value="71"/><column index="15" value="79"/><column index="16" value="79"/><column index="17" value="40"/><column index="18" value="103"/><column index="19" value="137"/><column index="20" value="118"/><column index="21" value="40"/><column index="22" value="119"/><column index="23" value="54"/><column index="24" value="135"/><column index="25" value="111"/><column index="26" value="103"/><column index="27" value="49"/></column_widths><filter_values><column index="2" value="aal"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table><table schema="main" name="trader2" show_row_id="0" encoding="" plot_x_axis="" unlock_view_pk="_rowid_" freeze_columns="0"><sort><column index="1" mode="0"/></sort><column_widths><column index="1" value="116"/><column index="2" value="109"/><column index="3" value="242"/><column index="4" value="117"/><column index="5" value="143"/><column index="6" value="127"/><column index="7" value="135"/><column index="8" value="119"/></column_widths><filter_values><column index="2" value="AAL 23MAY25 13.5 C"/><column index="1" value="aal"/></filter_values><conditional_formats/><row_id_formats/><display_formats/><hidden_columns/><plot_y_axes/><global_filter/></table></browse_table_settings></tab_browse><tab_sql><sql name="Edit View trader2">DROP VIEW IF EXISTS &quot;main&quot;.&quot;trader2&quot;;
+CREATE VIEW trader2 AS
+SELECT
+    &quot;symbol&quot;, -- Grouping column
+	&quot;description&quot;,
+	&quot;underlyingSymbol&quot;,
+    SUM(&quot;ibCommission&quot;) AS TotalIbCommission,
+    SUM(&quot;netCashInBase&quot;) AS TotalNetCashInBase,
+    SUM(&quot;fifoPnlRealized&quot;) AS TotalFifoPnlRealized,
+    SUM(&quot;capitalGainsPnl&quot;) AS TotalCapitalGainsPnl,
+    SUM(&quot;fxPnl&quot;) AS TotalFxPnl
+FROM &quot;IBFlexQueryCZK&quot;
+where tradedata =&gt; 20240413
+GROUP BY &quot;symbol&quot;</sql><sql name="SQL 3*">SELECT
+    &quot;symbol&quot;, -- Grouping column
+	&quot;description&quot;,
+	&quot;underlyingSymbol&quot;,
+    SUM(&quot;ibCommission&quot;) AS TotalIbCommission,
+	SUM(&quot;netCash&quot;) AS TotalNetCash,
+    SUM(&quot;netCashInBase&quot;) AS TotalNetCashInBase,
+    SUM(&quot;fifoPnlRealized&quot;) AS TotalFifoPnlRealized,
+    SUM(&quot;capitalGainsPnl&quot;) AS TotalCapitalGainsPnl,
+    SUM(&quot;fxPnl&quot;) AS TotalFxPnl
+FROM &quot;IBFlexQueryCZK&quot;
+where tradedata =&gt; 20240413
+GROUP BY &quot;symbol&quot;
+
+SELECT
+    &quot;symbol&quot;, -- Grouping column
+    &quot;description&quot;,
+    &quot;underlyingSymbol&quot;,
+    SUM(&quot;ibCommission&quot;) AS TotalIbCommission,
+    SUM(&quot;netCashInBase&quot;) AS TotalNetCashInBase,
+    SUM(&quot;fifoPnlRealized&quot;) AS TotalFifoPnlRealized,
+    SUM(&quot;capitalGainsPnl&quot;) AS TotalCapitalGainsPnl,
+    SUM(&quot;fxPnl&quot;) AS TotalFxPnl
+FROM &quot;IBFlexQueryCZK&quot;
+WHERE tradedata &gt;= 20240413 -- Corrected operator
+GROUP BY &quot;symbol&quot;, &quot;description&quot;, &quot;underlyingSymbol&quot;; -- Added missing grouping columns</sql><sql name="SQL 4*">SELECT
+    &quot;tradeDate&quot;,
+    &quot;underlyingSymbol&quot;,
+	&quot;description&quot;,
+	SUM (&quot;quantity&quot;) as TotalQuantity,
+    ROUND(SUM(&quot;ibCommission&quot;), 2) AS TotalIbCommission,
+	ROUND(SUM(&quot;netCash&quot;), 2) AS TotalNetCash,
+    ROUND(SUM(&quot;netCashInBase&quot;), 2) AS TotalNetCashInBase,
+    ROUND(SUM(&quot;fifoPnlRealized&quot;), 2) AS TotalFifoPnlRealized,
+    ROUND(SUM(&quot;capitalGainsPnl&quot;), 2) AS TotalCapitalGainsPnl,
+    ROUND(SUM(&quot;fxPnl&quot;), 2) AS TotalFxPnl
+FROM &quot;IBFlexQueryCZK&quot;
+WHERE tradedate &gt;= 20250314
+  AND &quot;underlyingSymbol&quot; = 'AAL'
+GROUP BY &quot;description&quot;, &quot;underlyingSymbol&quot;
+Order by  &quot;tradeDate&quot;
+
+</sql><sql name="Edit View trader2*">DROP VIEW IF EXISTS &quot;main&quot;.&quot;trader2&quot;;
+CREATE VIEW trader2 AS
+SELECT
+    &quot;tradeDate&quot;,
+    &quot;underlyingSymbol&quot;,
+	&quot;description&quot;,
+	SUM (&quot;quantity&quot;) as TotalQuantity,
+    ROUND(SUM(&quot;ibCommission&quot;), 2) AS TotalIbCommission,
+	ROUND(SUM(&quot;netCash&quot;), 2) AS TotalNetCash,
+    ROUND(SUM(&quot;netCashInBase&quot;), 2) AS TotalNetCashInBase,
+    ROUND(SUM(&quot;fifoPnlRealized&quot;), 2) AS TotalFifoPnlRealized,
+    ROUND(SUM(&quot;capitalGainsPnl&quot;), 2) AS TotalCapitalGainsPnl,
+    ROUND(SUM(&quot;fxPnl&quot;), 2) AS TotalFxPnl
+FROM &quot;IBFlexQueryCZK&quot;
+GROUP BY &quot;description&quot;, &quot;underlyingSymbol&quot;
+Order by  &quot;tradeDate&quot;</sql><sql name="SQL 6*">SELECT
+    &quot;underlyingSymbol&quot;,
+    SUM(&quot;quantity&quot;) AS TotalQuantity,
+    ROUND(SUM(&quot;ibCommission&quot;), 2) AS TotalIbCommission,
+    ROUND(SUM(&quot;netCash&quot;), 2) AS TotalNetCash,
+    ROUND(SUM(&quot;netCashInBase&quot;), 2) AS TotalNetCashInBase,
+    ROUND(SUM(&quot;fifoPnlRealized&quot;), 2) AS TotalFifoPnlRealized,
+    ROUND(SUM(&quot;capitalGainsPnl&quot;), 2) AS TotalCapitalGainsPnl,
+    ROUND(SUM(&quot;fxPnl&quot;), 2) AS TotalFxPnl
+FROM &quot;trader2&quot;
+WHERE tradedate &gt;= 20250314
+  AND &quot;underlyingSymbol&quot; = 'AAL'
+GROUP BY &quot;underlyingSymbol&quot;
+HAVING SUM(&quot;TotalQuantity&quot;) = 0;</sql><sql name="SQL 7*">SELECT
+	underlyingSymbol,
+    ROUND(SUM(&quot;TotalNetCash&quot;), 2) AS TotalNetCash,
+    ROUND(SUM(&quot;TotalNetCashInBase&quot;), 2) AS TotalNetCashInBase,
+	ROUND(SUM(&quot;TotalFxPnl&quot;), 2) AS TotalFxPnl
+from trader2
+WHERE tradedate &gt;= 20250314
+  AND &quot;underlyingSymbol&quot; = 'AAL'
+  and &quot;Totalquantity&quot; = 0
+GROUP BY &quot;underlyingSymbol&quot;</sql><sql name="SQL 8*">       SELECT underlyingSymbol,
+                    ROUND(SUM(&quot;TotalNetCash&quot;), 2) AS TotalNetCash,
+                    ROUND(SUM(&quot;TotalNetCashInBase&quot;), 2) AS TotalNetCashInBase,
+                    ROUND(SUM(&quot;TotalFxPnl&quot;), 2) AS TotalFxPnl
+                FROM trader2
+                WHERE &quot;tradeDate&quot; &gt;= 20250314
+                AND &quot;underlyingSymbol&quot; = &quot;AAL&quot;
+                AND &quot;Totalquantity&quot; = 0
+                GROUP BY &quot;underlyingSymbol&quot;</sql><current_tab id="6"/></tab_sql></sqlb_project>
