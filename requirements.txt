@@ -1,0 +1,4 @@
+PyQt6
+ib_insync
+openai
+numpy
