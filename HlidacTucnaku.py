@@ -56,13 +56,13 @@ class DeltaNeutralApp(QWidget):
         self.details_label = QLabel('Detaily pozice:')
         self.details_text = QLabel('Vyberte pozici pro zobrazení detailů.')
         
-        # Add summary table for trader2 data
+        # Add summary PnL table for trader2 data
         self.summary_label = QLabel('Souhrn obchodů:')
         self.summary_table = QTableWidget()
 
         self.summary_table.setColumnCount(4)
         self.summary_table.setHorizontalHeaderLabels([
-            'Symbol', 'Net Cash', 'Čistá hodnota', 'FX PnL'
+            'Symbol', 'Net Cash trade currency', 'Net Cash CZK', 'FX PnL'
         ])
         # Adjust column widths
         header = self.summary_table.horizontalHeader()
@@ -70,7 +70,15 @@ class DeltaNeutralApp(QWidget):
         header.setSectionResizeMode(1, header.ResizeMode.ResizeToContents)  # Net Cash
         header.setSectionResizeMode(2, header.ResizeMode.ResizeToContents)  # Net Cash In Base
         header.setSectionResizeMode(3, header.ResizeMode.ResizeToContents)  # FX PnL
-        
+
+        # Add open trades table
+        self.trade_open_label = QLabel('Otevřené pozice obchodů:')
+        self.trade_open_table = QTableWidget()
+        self.trade_open_table.setColumnCount(10)  # Increased to 10 columns
+        self.trade_open_table.setHorizontalHeaderLabels([
+            'Datum', 'Symbol', 'Popis', 'Množství', 'Komise', 
+            'Net Cash', 'Čistá hodnota', 'Realizovaný PnL', 'Kapitálový PnL', 'FX PnL'
+        ])        
         # Add trade history table
         self.trade_history_label = QLabel('Historie obchodů:')
         self.trade_history_table = QTableWidget()
@@ -79,6 +87,8 @@ class DeltaNeutralApp(QWidget):
             'Datum', 'Symbol', 'Popis', 'Množství', 'Komise', 
             'Net Cash', 'Čistá hodnota', 'Realizovaný PnL', 'Kapitálový PnL', 'FX PnL'
         ])
+
+        
         # Adjust column widths
         header = self.trade_history_table.horizontalHeader()
         header.setSectionResizeMode(0, header.ResizeMode.ResizeToContents)  # Date
@@ -107,6 +117,10 @@ class DeltaNeutralApp(QWidget):
         left_layout.addWidget(self.details_text)
         left_layout.addWidget(self.summary_label)
         left_layout.addWidget(self.summary_table)
+
+        left_layout.addWidget(self.trade_open_label)
+        left_layout.addWidget(self.trade_history_table)
+
         left_layout.addWidget(self.trade_history_label)
         left_layout.addWidget(self.trade_history_table)
         left_layout.addLayout(button_layout)
@@ -213,7 +227,7 @@ class DeltaNeutralApp(QWidget):
             cursor = conn.cursor()
             
             # Debug print
-            print(f"Querying trader2 for ticker: {ticker}, date: {date_open}")
+            # print(f"Querying trader2 for ticker: {ticker}, date: {date_open}")
             
             # First, let's check what data exists for this ticker
             cursor.execute('''
@@ -232,7 +246,7 @@ class DeltaNeutralApp(QWidget):
             ''', (date_open, ticker))
             
             debug_data = cursor.fetchall()
-            print(f"Debug data from trader2: {debug_data}")
+            # print(f"Debug data from trader2: {debug_data}")
             
             # Now try the summary query
             cursor.execute('''
@@ -249,7 +263,7 @@ class DeltaNeutralApp(QWidget):
             ''', (date_open, ticker))
             
             summary = cursor.fetchone()
-            print(f"Summary data: {summary}")  # Debug print
+            # print(f"Summary data: {summary}")  # Debug print
             
             # Clear and populate the summary table
             self.summary_table.setRowCount(1 if summary else 0)
