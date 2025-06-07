@@ -10,7 +10,7 @@ import os
 if __name__ == '__main__':
     fr = ib_insync.FlexReport(token, queryid)
     pdtrades = fr.df('Trade')
-
+    #print(pdtrades)
     conn = sq.connect(setsql['sqldata'])
     cur = conn.cursor()
 
