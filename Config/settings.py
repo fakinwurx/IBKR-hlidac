@@ -13,7 +13,7 @@ setmail = {
 }
 # cesta k databazi
 setsql = {
-        'sqldata' : 'data\IBFlexQuery.db'
+        'sqldata' : 'Data\IBFlexQuery.db'
 }
 
 # název soubory s logy systemu
@@ -21,10 +21,10 @@ setlogfile = {
         'filename' : 'autotrader.log'
 }
 # token
-token = 'your FLEX QUERY TOKEN'
+token = '17929428996067461192528'
 # Query ID
 
-queryid = '622438'
+queryid = '1232437'
 # queryid = '877428' # pro Year To Date data
 
 # kurz pro prepocet kapitalu, pouzije se v pripade chyby nacteni kurzu CZK/USD z IB
