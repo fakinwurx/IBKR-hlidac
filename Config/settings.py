@@ -21,10 +21,10 @@ setlogfile = {
         'filename' : 'autotrader.log'
 }
 # token
-token = '17929428996067461192528'
+token = 'xxx'
 # Query ID
 
-queryid = '1232437'
+queryid = 'xxx'
 # queryid = '877428' # pro Year To Date data
 
 # kurz pro prepocet kapitalu, pouzije se v pripade chyby nacteni kurzu CZK/USD z IB
