@@ -1,0 +1,103 @@
+# news_api_manager.py
+import requests
+from datetime import datetime, timedelta
+import config # Pro získání API klíče
+
+class NewsAPIManager:
+    def __init__(self, chat_output_widget):
+        """
+        Inicializuje NewsAPIManager.
+
+        Args:
+            chat_output_widget (QTextEdit): Widget pro výstup zpráv.
+        """
+        self.chat_output = chat_output_widget
+        self.api_key = config.NEWS_API_KEY # Získání API klíče z config.py
+        
+        if not self.api_key:
+            self.chat_output.append("<span style='color:orange;'>Upozornění: API klíč pro News API není nastaven v config.py. Novinky nemusí fungovat.</span>")
+            print("WARNING: News API key is not set in config.py.")
+
+    def get_upcoming_news(self, ticker, days_ahead=30):
+        """
+        Získá nadcházející novinky pro daný ticker v průběhu zadaného počtu dnů.
+        TATO METODA JE POUZE ZÁSTUPNÁ. Budete muset integrovat skutečné News API zde.
+
+        Args:
+            ticker (str): Symbol akcie (např. "M").
+            days_ahead (int): Počet dnů dopředu, pro které se mají zprávy hledat.
+
+        Returns:
+            list: Seznam slovníků s detaily novinek (např. [{'date': 'YYYY-MM-DD', 'title': 'Nadpis', 'source': 'Zdroj', 'url': 'URL'}]).
+                  Vrátí prázdný seznam v případě chyby nebo absence novinek.
+        """
+        self.chat_output.append(f"Pokouším se získat novinky pro {ticker} na {days_ahead} dní dopředu...")
+        
+        # --- ZÁSTUPNÝ KÓD PRO NEWS API INTEGRACI ---
+        # Zde musíte vložit kód pro volání skutečného News API, např. NewsAPI.org, Alpha Vantage, Finnhub, apod.
+        # Následující je POUZE PŘÍKLAD, který nevolá skutečné API.
+        
+        # Příklad URL pro fiktivní API nebo demo data
+        # Mnoho News API má volání pro "search" nebo "headlines"
+        # URL = f"https://api.example.com/news?q={ticker}&from={start_date}&to={end_date}&apiKey={self.api_key}"
+        
+        # Výpočet datového rozsahu
+        start_date = datetime.now()
+        end_date = start_date + timedelta(days=days_ahead)
+        
+        # Převedení na formát 'YYYY-MM-DD' pro API dotazy
+        start_date_str = start_date.strftime('%Y-%m-%d')
+        end_date_str = end_date.strftime('%Y-%m-%d')
+
+        # Dummy data pro testování
+        dummy_news = []
+        if ticker == "M":
+            dummy_news = [
+                {'date': '2025-07-10', 'title': 'Macy\'s Q2 Earnings Call Announced', 'source': 'Press Release', 'url': 'http://example.com/macys-q2'},
+                {'date': '2025-07-15', 'title': 'Retail Sector Outlook Improving', 'source': 'Industry Analyst', 'url': 'http://example.com/retail-outlook'},
+                {'date': '2025-07-20', 'title': 'New CEO Appointed at Rival Retailer', 'source': 'Bloomberg', 'url': 'http://example.com/rival-ceo'},
+            ]
+        elif ticker == "SOFI":
+            dummy_news = [
+                {'date': '2025-07-05', 'title': 'SoFi to Launch New Lending Product', 'source': 'Fintech Daily', 'url': 'http://example.com/sofi-lending'},
+                {'date': '2025-07-25', 'title': 'Analyst Upgrade for SoFi Stock', 'source': 'MarketWatch', 'url': 'http://example.com/sofi-upgrade'},
+            ]
+        elif ticker == "KHC":
+            dummy_news = [
+                {'date': '2025-07-12', 'title': 'Kraft Heinz Dividend Announcement', 'source': 'Company News', 'url': 'http://example.com/khc-dividend'},
+                {'date': '2025-07-28', 'title': 'Commodity Prices Impacting Food Sector', 'source': 'Reuters', 'url': 'http://example.com/commodities'},
+            ]
+        else:
+            self.chat_output.append(f"Žádné dummy novinky pro {ticker}.")
+
+        # V případě volání skutečného API by to vypadalo nějak takto:
+        # try:
+        #     response = requests.get(URL)
+        #     response.raise_for_status() # Vyvolá HTTPError pro špatné odpovědi (4xx nebo 5xx)
+        #     data = response.json()
+        #     
+        #     # Zde byste parsovali 'data' podle struktury vašeho News API
+        #     # Příklad pro NewsAPI.org:
+        #     # news_items = []
+        #     # for article in data.get('articles', []):
+        #     #     news_items.append({
+        #     #         'date': article.get('publishedAt', '')[:10], # Jen datum
+        #     #         'title': article.get('title', ''),
+        #     #         'source': article.get('source', {}).get('name', ''),
+        #     #         'url': article.get('url', '')
+        #     #     })
+        #     # return news_items
+        #     
+        #     return dummy_news # Prozatím vracíme dummy data
+        #
+        # except requests.exceptions.RequestException as e:
+        #     self.chat_output.append(f"<span style='color:red;'>CHYBA při získávání novinek z API pro {ticker}: {e}</span>")
+        #     print(f"ERROR: News API request failed for {ticker}: {e}")
+        #     return []
+        # except Exception as e:
+        #     self.chat_output.append(f"<span style='color:red;'>Neočekávaná chyba při zpracování novinek pro {ticker}: {e}</span>")
+        #     print(f"ERROR: Unexpected error processing news for {ticker}: {e}")
+        #     return []
+        
+        self.chat_output.append(f"Dummy novinky pro {ticker} načteny.")
+        return dummy_news # Vracíme dummy data
