@@ -1,37 +1,120 @@
 # database_manager.py
 import sqlite3
-from PyQt6.QtWidgets import QTableWidgetItem, QApplication
-from PyQt6.QtGui import QColor
-import os # For checking file existence
+import os
+import config # Importujeme config pro získání cesty k DB
+from PyQt6.QtWidgets import QTableWidgetItem # Importujeme QTableWidgetItem
+from PyQt6.QtGui import QColor # Importujeme QColor
 
 class DatabaseManager:
     def __init__(self, db_path, chat_output_widget):
         """
-        Initializes the DatabaseManager.
+        Inicializuje DatabaseManager a připojí se k SQLite databázi.
+        Pokud databáze nebo tabulka 'DN' neexistují, vytvoří je.
 
         Args:
-            db_path (str): The path to the SQLite database file.
-            chat_output_widget (QTextEdit): Reference to the QTextEdit widget
-                                            to display messages/errors.
+            db_path (str): Cesta k souboru databáze SQLite.
+            chat_output_widget (QTextEdit): Widget pro výstup zpráv.
         """
         self.db_path = db_path
         self.chat_output = chat_output_widget
+        
+        # Zajištění existence adresáře a DB souboru
+        self._ensure_db_exists()
+        # Vytvoření tabulek, pokud neexistují
+        self._create_tables_if_not_exist()
 
-        # Ensure the database file exists before trying to connect
+    def _ensure_db_exists(self):
+        """Zajistí, že adresář pro DB existuje a zkontroluje existenci souboru DB."""
+        db_dir = os.path.dirname(self.db_path)
+        if db_dir and not os.path.exists(db_dir):
+            os.makedirs(db_dir)
+            self.chat_output.append(f"Vytvořen adresář pro DB: {db_dir}")
+        
+        # Tato část kontroluje existenci souboru DB
         if not os.path.exists(self.db_path):
-            self.chat_output.append(f"ERROR: Database file not found at '{self.db_path}'.")
-            print(f"ERROR: Database file not found at '{self.db_path}'.")
+            self.chat_output.append(f"Upozornění: Soubor databáze '{self.db_path}' nebyl nalezen. Bude vytvořen.")
+            # Není potřeba explicitně vytvářet soubor, sqlite3.connect to udělá samo
+
+    def _get_connection(self):
+        """Vrátí připojení k databázi."""
+        return sqlite3.connect(self.db_path)
+
+    def _create_tables_if_not_exist(self):
+        """Vytvoří potřebné tabulky, pokud neexistují."""
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS DN (
+                    DateOpen TEXT NOT NULL,
+                    Ticker TEXT NOT NULL,
+                    DateClose TEXT,
+                    PRIMARY KEY (DateOpen, Ticker)
+                )
+            """)
+            conn.commit()
+            conn.close()
+            self.chat_output.append("Tabulka 'DN' v databázi připravena.")
+        except Exception as e:
+            self.chat_output.append(f"<span style='color:red;'>CHYBA při vytváření tabulky DN: {e}</span>")
+            print(f"ERROR: Failed to create DN table: {e}")
+
+    def get_all_dn_entries(self):
+        """
+        Získá všechny záznamy z tabulky DN (otevřené i uzavřené).
+
+        Returns:
+            list: Seznam tuple, kde každé tuple představuje řádek tabulky (DateOpen, Ticker, DateClose).
+        """
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("SELECT DateOpen, Ticker, DateClose FROM DN ORDER BY DateOpen DESC")
+            entries = cursor.fetchall()
+            conn.close()
+            return entries
+        except Exception as e:
+            self.chat_output.append(f"<span style='color:red;'>CHYBA při načítání všech záznamů z DN: {e}</span>")
+            print(f"ERROR: Failed to get all DN entries: {e}")
+            return []
+
+    def add_dn_entry(self, date_open, ticker):
+        """
+        Přidá nový záznam do tabulky DN.
+
+        Args:
+            date_open (str): Datum otevření ve formátu YYYYMMDD.
+            ticker (str): Symbol tickeru.
+        """
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute("INSERT INTO DN (DateOpen, Ticker, DateClose) VALUES (?, ?, NULL)",
+                           (date_open, ticker))
+            conn.commit()
+            conn.close()
+        except sqlite3.IntegrityError:
+            # Záznam s tímto DateOpen a Ticker již existuje (PRIMARY KEY constraint)
+            conn.close() # Důležité: zavřít spojení před vyvoláním chyby
+            raise ValueError(f"Záznam pro '{ticker}' s datem '{date_open}' již existuje.") 
+        except Exception as e:
+            self.chat_output.append(f"<span style='color:red;'>CHYBA při vkládání záznamu do DN: {e}</span>")
+            print(f"ERROR: Failed to insert DN entry: {e}")
+            conn.close()
+            raise # Znovu vyhodíme chybu pro main_app
 
     def load_dn_positions(self, positions_table):
         """
         Loads open positions from the 'DN' table in the database
         and displays them in the provided QTableWidget.
+        Note: This method is now secondary, get_all_dn_entries is used for the main DN table.
+        This can be used for a separate view if needed, or removed if redundant.
 
         Args:
             positions_table (QTableWidget): The table widget to populate.
         """
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
 
             # Query to get open positions (where DateClose is NULL or empty)
@@ -39,6 +122,7 @@ class DatabaseManager:
                 SELECT Ticker, DateOpen, DateClose
                 FROM DN
                 WHERE DateClose IS NULL OR DateClose = ''
+                ORDER BY DateOpen DESC
             ''')
             
             positions = cursor.fetchall()
@@ -54,12 +138,14 @@ class DatabaseManager:
                 positions_table.setItem(i, 2, QTableWidgetItem(str(date_close) if date_close else ''))
 
             conn.close()
+            self.chat_output.append("Otevřené DN pozice načteny do tabulky (pokud je použita).")
         except sqlite3.Error as e:
-            self.chat_output.setText(f"Chyba při načítání pozic z DB: {e}")
-            print(f"Error loading positions from DB: {e}")
+            self.chat_output.append(f"<span style='color:red;'>Chyba při načítání otevřených pozic z DB: {e}</span>")
+            print(f"Error loading open positions from DB: {e}")
         except Exception as e:
-            self.chat_output.setText(f"Neočekávaná chyba při načítání pozic z DB: {e}")
-            print(f"Unexpected error loading positions from DB: {e}")
+            self.chat_output.append(f"<span style='color:red;'>Neočekávaná chyba při načítání otevřených pozic z DB: {e}</span>")
+            print(f"Unexpected error loading open positions from DB: {e}")
+
 
     def load_trade_history_and_summary(self, position, summary_table, trade_history_table):
         """
@@ -75,25 +161,12 @@ class DatabaseManager:
         raw_date_open = position['date_open']
         raw_date_close = position.get('date_close', '')
 
-        date_open_int = None
-        date_close_int = None
-
-        try:
-            date_open_int = int(raw_date_open)
-        except ValueError:
-            self.chat_output.append(f"Chyba konverze: 'Datum otevření' '{raw_date_open}' není platné číslo pro YYYYMMDD.")
-            date_open_int = raw_date_open # Keep original if conversion fails
-
-        if raw_date_close:
-            try:
-                date_close_int = int(raw_date_close)
-            except ValueError:
-                self.chat_output.append(f"Chyba konverze: 'Datum uzavření' '{raw_date_close}' není platné číslo pro YYYYMMDD.")
-                date_close_int = raw_date_close # Keep original if conversion fails
+        date_open_str = str(raw_date_open) # Ensure it's string for direct use in SQL
+        date_close_str = str(raw_date_close) if raw_date_close else '' # Ensure it's string
 
         conn = None
         try:
-            conn = sqlite3.connect(self.db_path)
+            conn = self._get_connection()
             cursor = conn.cursor()
 
             # SQL query to fetch trade details with new columns for options
@@ -115,11 +188,11 @@ class DatabaseManager:
                 FROM "IBFlexQueryCZK"
                 WHERE "underlyingSymbol" = ? AND "tradeDate" >= ?
             '''
-            params = [ticker, date_open_int]
+            params = [ticker, date_open_str] # Use date_open_str directly
 
-            if date_close_int is not None and date_close_int != '':
+            if date_close_str: # Check if date_close_str is not empty
                 sql_query += ' AND "tradeDate" <= ?'
-                params.append(date_close_int)
+                params.append(date_close_str) # Use date_close_str directly
             
             sql_query += ' GROUP BY "tradeDate", "description", "underlyingSymbol", "putCall", "strike", "averagePrice" ORDER BY "tradeDate"'
 
@@ -193,13 +266,13 @@ class DatabaseManager:
                 trade_history_table.setItem(i, 5, pnl_item)
                 trade_history_table.setItem(i, 6, average_price_item)
 
+            self.chat_output.append("Historie obchodů a souhrn načteny.")
         except sqlite3.Error as e:
-            self.chat_output.append(f"Chyba při načítání historie obchodů z DB: {e}")
+            self.chat_output.append(f"<span style='color:red;'>Chyba při načítání historie obchodů z DB: {e}</span>")
             print(f"Error loading trade history from DB: {e}")
         except Exception as e:
-            self.chat_output.append(f"Neočekávaná chyba při načítání historie obchodů: {e}")
+            self.chat_output.append(f"<span style='color:red;'>Neočekávaná chyba při načítání historie obchodů: {e}</span>")
             print(f"Unexpected error loading trade history: {e}")
         finally:
             if conn:
                 conn.close()
-
