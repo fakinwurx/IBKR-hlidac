@@ -31,10 +31,10 @@ LOG_FILE_SETTINGS = {
 }
 NEWS_API_KEY = ''
 # Token
-TOKEN = 'xxx'
+TOKEN = ''
 
 # Query ID for Flex Query
-QUERY_ID = 'xxx'
+QUERY_ID = ''
 # QUERY_ID = '877428' # for Year To Date data
 
 # Exchange rate for capital conversion, used in case of error loading CZK/USD rate from IB
