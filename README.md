@@ -47,6 +47,7 @@ The main objective of this project is to create a robust and user-friendly appli
 * **Interactive Brokers Integration:** Connects to IB TWS/Gateway for retrieving live position and market data.
 * **OpenAI GPT Chat:** Integrated chat module for quick questions and answers, with the ability to select different GPT models (gpt-4o, gpt-3.5-turbo, etc.).
 * **User Interface:** Intuitive GUI built with PyQt6.
+* **Flex Report:** Donwloading YTD actual info and updating database by click of a button !
 
 ## Planned Future Enhancements
 
@@ -71,6 +72,7 @@ The project is under active development, and the following key features are plan
 * Python 3.9+
 * Interactive Brokers TWS (Trader Workstation) or IB Gateway running and connected to your account.
 * An OpenAI account with a valid API key.
+* For Report Downloading and full funtionality IBKR FLEX QUERY TOKEN AND ID is required
 
 ### Installation Steps
 
