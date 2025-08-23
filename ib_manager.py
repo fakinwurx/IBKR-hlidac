@@ -222,7 +222,8 @@ class IBManager:
                 elif position_qty_for_calc < 0: # Short position (sold asset)
                     if isinstance(pnl_calculation_price_per_share, (float, int)):
                         # PnL for short position: (Initial Credit per contract - Current Cost to Close per contract) * number of contracts
-                        unrealized_pnl = (avg_cost_for_calc - (pnl_calculation_price_per_share * multiplier)) * abs(position_qty_for_calc)
+                        # Opraveno: Multiplikátor se aplikuje na celý rozdíl, nikoli jen na aktuální cenu
+                        unrealized_pnl = (avg_cost_for_calc - pnl_calculation_price_per_share) * abs(position_qty_for_calc) * multiplier
                         print(f"  Calculated Unrealized PnL (Short): {unrealized_pnl:.2f}")
                     else:
                         print(f"  WARNING: PnL calculation price per share for Short {contract.symbol} is not a number: {pnl_calculation_price_per_share}")
@@ -376,7 +377,8 @@ class IBManager:
                 elif position_qty_for_calc < 0: # Short position (sold asset)
                     if isinstance(pnl_calculation_price_per_share, (float, int)):
                         # PnL for short position: (Initial Credit per contract - Current Cost to Close per contract) * number of contracts
-                        unrealized_pnl_val = (avg_cost_for_calc - (pnl_calculation_price_per_share * multiplier)) * abs(position_qty_for_calc)
+                        # Opraveno: Multiplikátor se aplikuje na celý rozdíl, nikoli jen na aktuální cenu
+                        unrealized_pnl_val = (avg_cost_for_calc - pnl_calculation_price_per_share) * abs(position_qty_for_calc) * multiplier
                         print(f"  Calculated PnL (Short): {unrealized_pnl_val:.2f}")
                     else:
                         print(f"  WARNING: PnL calculation price per share for Short {p.contract.symbol} is not a number: {pnl_calculation_price_per_share}")

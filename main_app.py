@@ -3,16 +3,59 @@ import sys
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QLabel, QPushButton, QHBoxLayout,
     QTableWidget, QTableWidgetItem, QLineEdit, QTextEdit, QComboBox, QHeaderView,
-    QMessageBox
+    QMessageBox, QDialog, QFormLayout, QDialogButtonBox, QDateEdit
 )
+from PyQt6.QtCore import QDate
 from PyQt6.QtGui import QColor
 
 # Import the new manager classes and config
 from ib_manager import IBManager
 from database_manager import DatabaseManager
 from openai_chat_manager import OpenAIChatManager
-from my_financial_data_manager import FinancialDataManager 
+from my_financial_data_manager import FinancialDataManager
 import config
+
+# Import modules needed for the new script (kód číslo 2)
+# Ujistěte se, že jsou nainstalovány!
+# pip install ib_insync
+# pip install pandas
+# pip install sqlite3 (obvykle je součástí Pythonu)
+import ib_insync
+import pandas as pd
+import sqlite3 as sq
+from datetime import datetime
+import os
+
+class AddStrategyDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Přidat novou Delta Neutral strategii")
+        self.layout = QFormLayout(self)
+        
+        self.ticker_input = QLineEdit(self)
+        self.date_input = QDateEdit(self)
+        self.date_input.setDate(QDate.currentDate())
+        self.date_input.setCalendarPopup(True)
+        self.date_input.setDisplayFormat("yyyy-MM-dd")
+        
+        self.layout.addRow("Ticker:", self.ticker_input)
+        self.layout.addRow("Datum vstupu:", self.date_input)
+        
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel, self)
+        self.buttons.accepted.connect(self.accept)
+        self.buttons.rejected.connect(self.reject)
+        self.layout.addWidget(self.buttons)
+        
+        self.ticker = None
+        self.date_open = None
+
+    def accept(self):
+        self.ticker = self.ticker_input.text().strip().upper()
+        self.date_open = self.date_input.date().toString("yyyy-MM-dd")
+        if not self.ticker or not self.date_open:
+            QMessageBox.warning(self, "Chyba", "Prosím vyplňte obě pole.")
+            return
+        super().accept()
 
 class DeltaNeutralApp(QWidget):
     def __init__(self):
@@ -25,7 +68,6 @@ class DeltaNeutralApp(QWidget):
         self.gpt_response_output = QTextEdit(self)
         self.gpt_response_output.setPlaceholderText("Odpověď GPT se objeví zde.")
         self.gpt_response_output.setReadOnly(True)
-
 
         self.ib_manager = IBManager(self.chat_output)
         self.db_manager = DatabaseManager(config.DATABASE_PATH, self.chat_output)
@@ -61,10 +103,13 @@ class DeltaNeutralApp(QWidget):
         self.positions_table = QTableWidget()
         self.positions_table.setColumnCount(3)
         self.positions_table.setHorizontalHeaderLabels(['Ticker', 'Datum Vstup', 'Datum Výstup'])
+        # Povolíme editaci buněk v tabulce pro datumy
+        self.positions_table.setEditTriggers(QTableWidget.EditTrigger.AnyKeyPressed | QTableWidget.EditTrigger.DoubleClicked)
         # Připojujeme on_position_click k cellClicked pro aktualizaci selected_position_for_gpt
         self.positions_table.cellClicked.connect(self.on_position_click)
+        # Nový signál pro sledování změn v buňkách
+        self.positions_table.cellChanged.connect(self.on_position_cell_edited)
         self.positions_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-
 
         self.details_label = QLabel('Detaily vybrané pozice:')
         self.details_text = QLabel('Vyberte pozici pro zobrazení detailů.')
@@ -119,11 +164,15 @@ class DeltaNeutralApp(QWidget):
         live_header.setSectionResizeMode(7, QHeaderView.ResizeMode.ResizeToContents)
 
         self.trade_history_label = QLabel('Historie obchodů pro vybraný Ticker:')
+        
+        # NOVINKA: Změna počtu sloupců na 8, aby se vešel skrytý tradeId
         self.trade_history_table = QTableWidget()
-        self.trade_history_table.setColumnCount(7) 
+        self.trade_history_table.setColumnCount(8) 
         self.trade_history_table.setHorizontalHeaderLabels([
-            "Datum", "Symbol", "C/P", "Strike", "Množství", "Realizovaný PnL", "Avg Price"
+            "Datum", "Symbol", "C/P", "Strike", "Množství", "Realizovaný PnL", "Avg Price", "Trade ID"
         ])
+        # NOVINKA: Skrytí sloupce "Trade ID"
+        self.trade_history_table.hideColumn(7)
         history_header = self.trade_history_table.horizontalHeader()
         history_header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
         history_header.setSectionResizeMode(1, QHeaderView.ResizeMode.ResizeToContents)
@@ -132,23 +181,43 @@ class DeltaNeutralApp(QWidget):
         history_header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
         history_header.setSectionResizeMode(5, QHeaderView.ResizeMode.ResizeToContents)
         history_header.setSectionResizeMode(6, QHeaderView.ResizeMode.ResizeToContents)
-
+        
+        # Připojíme on_trade_history_click k cellClicked
+        self.trade_history_table.cellClicked.connect(self.on_trade_history_click)
 
         button_layout = QHBoxLayout()
+
+        add_dn_entry_button = QPushButton('Přidat záznam DN')
+        add_dn_entry_button.clicked.connect(self.add_dn_entry)
+        button_layout.addWidget(add_dn_entry_button)
 
         load_dn_strategies_button = QPushButton('Načíst strategie (DB)')
         load_dn_strategies_button.clicked.connect(self.load_dn_strategies)
         button_layout.addWidget(load_dn_strategies_button)
+        
+        # TLAČÍTKO PRO SMAZÁNÍ STRATEGIE
+        delete_dn_entry_button = QPushButton('Smazat vybraný záznam DN')
+        delete_dn_entry_button.clicked.connect(self.delete_selected_dn_entry)
+        button_layout.addWidget(delete_dn_entry_button)
 
         load_live_ib_positions_button = QPushButton('Zobrazit živé pozice IB')
         load_live_ib_positions_button.clicked.connect(self.on_show_live_ib_positions_button_click)
         button_layout.addWidget(load_live_ib_positions_button)
+        
+        # TLAČÍTKO PRO SPUŠTĚNÍ FLEXREPORTU
+        run_flexreport_button = QPushButton('Spustit FlexReport (Kód 2)')
+        run_flexreport_button.clicked.connect(self.on_run_flexreport)
+        button_layout.addWidget(run_flexreport_button)
 
         self.show_news_button = QPushButton("Zobrazit novinky pro vybraný ticker")
         self.show_news_button.clicked.connect(self.show_news_for_selected_ticker)
         self.show_news_button.setEnabled(False) 
         button_layout.addWidget(self.show_news_button)
-
+        
+        # TLAČÍTKO PRO SMAZÁNÍ ZÁZNAMU Z HISTORIE OBCHODŮ
+        delete_trade_history_button = QPushButton('Smazat vybraný záznam z historie')
+        delete_trade_history_button.clicked.connect(self.delete_selected_trade_history_entry)
+        button_layout.addWidget(delete_trade_history_button)
 
         left_layout.addWidget(self.positions_label)
         left_layout.addWidget(self.positions_table)
@@ -194,18 +263,76 @@ class DeltaNeutralApp(QWidget):
         right_layout.addWidget(self.chat_button)
         right_layout.addWidget(self.gpt_response_output)
 
-
         main_layout.addLayout(left_layout, 65) 
         main_layout.addLayout(right_layout, 35) 
 
         self.setLayout(main_layout)
 
+    def on_position_cell_edited(self, row, column):
+        """
+        Handles cell edits in the positions table.
+        Updates the database with the new data.
+        """
+        # Ignorovat sloupce, které by neměly být editovatelné (např. Ticker)
+        if column != 1 and column != 2:
+            return
+
+        # Získáme všechny hodnoty z řádku, abychom měli unikátní identifikátor
+        ticker = self.positions_table.item(row, 0).text()
+        new_value = self.positions_table.item(row, column).text()
+        
+        # Získáme starou hodnotu 'date_open' pro identifikaci
+        # Uložíme si ji do proměnné před jakoukoliv změnou
+        original_date_open_item = self.positions_table.item(row, 1)
+        original_date_close_item = self.positions_table.item(row, 2)
+        
+        # Získáme hodnoty pro primární klíč
+        original_date_open = original_date_open_item.text() if original_date_open_item else None
+        original_date_close = original_date_close_item.text() if original_date_close_item else ''
+
+        # Určíme, který sloupec se změnil
+        column_name = 'date_open' if column == 1 else 'date_close'
+
+        if ticker and original_date_open:
+            self.db_manager.update_dn_strategy(ticker, original_date_open, original_date_close, column_name, new_value)
+        else:
+            self.chat_output.append("<span style='color:red;'>Chyba: Nepodařilo se najít data pro aktualizaci.</span>")
+
+    def add_dn_entry(self):
+        """Otevře dialog pro přidání nového záznamu Delta Neutral strategie."""
+        dialog = AddStrategyDialog(self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            ticker = dialog.ticker
+            date_open = dialog.date_open
+            
+            try:
+                self.db_manager.add_dn_entry(ticker, date_open)
+                self.chat_output.append(f"<span style='color:green;'>Úspěšně přidán záznam pro {ticker} s datem {date_open}.</span>")
+                self.load_dn_strategies()
+            except Exception as e:
+                self.chat_output.append(f"<span style='color:red;'>Chyba při přidávání záznamu: {e}</span>")
+
     def load_dn_strategies(self):
         """Delegates to DatabaseManager to load strategy positions."""
-        self.db_manager.load_dn_positions(self.positions_table)
+        # Odpojení signálu, abychom zabránili nechtěnému spuštění při načítání dat
+        try:
+            self.positions_table.cellChanged.disconnect(self.on_position_cell_edited)
+        except TypeError:
+            pass # Signál není připojen, neřešit
+        
+        # Využijeme metodu, která načte VŠECHNY DN záznamy, včetně uzavřených
+        entries = self.db_manager.get_all_dn_entries()
+        self.positions_table.setRowCount(len(entries))
+        for i, entry in enumerate(entries):
+            date_open, ticker, date_close = entry
+            self.positions_table.setItem(i, 0, QTableWidgetItem(ticker))
+            self.positions_table.setItem(i, 1, QTableWidgetItem(date_open))
+            self.positions_table.setItem(i, 2, QTableWidgetItem(date_close))
+
+        # Znovu připojení signálu po načtení dat
+        self.positions_table.cellChanged.connect(self.on_position_cell_edited)
         # Reset selected position data when strategies are reloaded
         self.selected_position_for_gpt = None 
-
 
     def on_show_live_ib_positions_button_click(self):
         """Handles click on 'Zobrazit živé pozice IB' button, delegates to IBManager."""
@@ -287,6 +414,144 @@ class DeltaNeutralApp(QWidget):
 
         self.show_news_button.setEnabled(True)
 
+    def on_trade_history_click(self, row, column):
+        """Zpracuje kliknutí na řádek v tabulce historie obchodů."""
+        # Tato metoda zatím nic nedělá, ale může být použita v budoucnu
+        # pro zobrazení detailů obchodu nebo jiné akce.
+        pass
+    
+    def delete_selected_dn_entry(self):
+        """
+        Smaže vybraný záznam z tabulky DN a z databáze po potvrzení.
+        """
+        row_index = self.positions_table.currentRow()
+        if row_index == -1:
+            self.chat_output.append("<span style='color:orange;'>Prosím, vyberte záznam, který chcete smazat.</span>")
+            return
+
+        date_open_item = self.positions_table.item(row_index, 1)
+        ticker_item = self.positions_table.item(row_index, 0)
+
+        if date_open_item and ticker_item:
+            date_open = date_open_item.text()
+            ticker = ticker_item.text()
+            
+            # Zobrazit dialog pro potvrzení smazání
+            confirm_dialog = QMessageBox()
+            confirm_dialog.setIcon(QMessageBox.Icon.Question)
+            confirm_dialog.setWindowTitle("Potvrzení smazání")
+            confirm_dialog.setText(f"Opravdu chcete smazat záznam pro '{ticker}' s datem '{date_open}'?\nTato akce je nevratná.")
+            confirm_dialog.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            confirm_dialog.setDefaultButton(QMessageBox.StandardButton.No)
+            
+            if confirm_dialog.exec() == QMessageBox.StandardButton.Yes:
+                try:
+                    self.db_manager.delete_dn_entry(ticker, date_open)
+                    self.load_dn_strategies()
+                except Exception as e:
+                    self.chat_output.append(f"<span style='color:red;'>Nepodařilo se smazat záznam: {e}</span>")
+        else:
+            self.chat_output.append("<span style='color:red;'>Chyba: Vybraný řádek neobsahuje platná data.</span>")
+            
+    def delete_selected_trade_history_entry(self):
+        """
+        Smaže vybraný záznam z tabulky historie obchodů a z databáze po potvrzení.
+        """
+        row_index = self.trade_history_table.currentRow()
+        if row_index == -1:
+            self.chat_output.append("<span style='color:orange;'>Prosím, vyberte záznam z historie obchodů, který chcete smazat.</span>")
+            return
+            
+        # NOVINKA: Získání Trade ID ze skrytého sloupce (index 7)
+        trade_id_item = self.trade_history_table.item(row_index, 7) 
+        
+        # Zkontrolujeme, zda máme data pro smazání
+        if trade_id_item and trade_id_item.text():
+            trade_id = trade_id_item.text()
+            symbol = self.trade_history_table.item(row_index, 1).text()
+            
+            # Zobrazit dialog pro potvrzení smazání
+            confirm_dialog = QMessageBox()
+            confirm_dialog.setIcon(QMessageBox.Icon.Question)
+            confirm_dialog.setWindowTitle("Potvrzení smazání")
+            confirm_dialog.setText(f"Opravdu chcete smazat záznam pro '{symbol}' s ID obchodu '{trade_id}'?\nTato akce je nevratná.")
+            confirm_dialog.setStandardButtons(QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No)
+            confirm_dialog.setDefaultButton(QMessageBox.StandardButton.No)
+            
+            if confirm_dialog.exec() == QMessageBox.StandardButton.Yes:
+                try:
+                    conn = sq.connect(config.DATABASE_PATH)
+                    cursor = conn.cursor()
+                    
+                    # Použijeme Trade ID pro přesné smazání
+                    cursor.execute("""
+                        DELETE FROM IBFlexQueryCZK
+                        WHERE tradeId = ?
+                    """, (trade_id,))
+                    
+                    conn.commit()
+                    conn.close()
+                    
+                    self.chat_output.append(f"<span style='color:green;'>Záznam pro '{symbol}' s ID '{trade_id}' byl úspěšně smazán z historie obchodů.</span>")
+                    
+                    # Znovu načteme historii obchodů, abychom aktualizovali tabulku
+                    if self.selected_position_for_gpt:
+                        position_data_for_db = {
+                            'ticker': self.selected_position_for_gpt['ticker'],
+                            'date_open': self.selected_position_for_gpt['date_open'],
+                            'date_close': self.selected_position_for_gpt['date_close']
+                        }
+                        self.db_manager.load_trade_history_and_summary(
+                            position_data_for_db,
+                            self.summary_table,
+                            self.trade_history_table
+                        )
+                except Exception as e:
+                    self.chat_output.append(f"<span style='color:red;'>Nepodařilo se smazat záznam z historie: {e}</span>")
+        else:
+            self.chat_output.append("<span style='color:red;'>Chyba: Vybraný řádek historie neobsahuje platná data pro smazání.</span>")
+
+    def on_run_flexreport(self):
+        """
+        NOVÁ METODA pro spuštění FlexReport skriptu.
+        Opravená verze s kódem uvnitř metody.
+        """
+        conn = None # Zajišťujeme, že proměnná conn je inicializována
+        self.chat_output.append("<span style='color:blue;'>Spouštím stahování a ukládání FlexReportu...</span>")
+        
+        try:
+            # Získání hodnot z konfiguračního souboru a odstranění bílých znaků
+            token = config.TOKEN.strip()
+            queryid = config.QUERY_ID.strip()
+            database_path = config.DATABASE_PATH # Správná proměnná z config.py
+
+            # Připojení k databázi SQLite
+            conn = sq.connect(database_path)
+            cur = conn.cursor()
+            
+            self.chat_output.append("Všechna data z tabulky 'IBFlexQueryCZK' byla smazána.")
+            cur.execute('''DELETE FROM IBFlexQueryCZK''')
+            conn.commit()
+
+            # Stažení nových dat z FlexReportu
+            fr = ib_insync.FlexReport(token, queryid)
+            pdtrades = fr.df('Trade')
+            
+            self.chat_output.append(f"Úspěšně staženo {len(pdtrades)} záznamů z FlexReportu.")
+            
+            # Vložení nových dat do databáze (smazání předchozích a vložení nových)
+            pdtrades.to_sql('IBFlexQueryCZK', conn, if_exists='replace', index=False)
+
+            # Získání počtu nově přidaných řádků
+            self.chat_output.append(f"Úspěšně vloženo {len(pdtrades)} nových obchodů do databáze 'IBFlexQueryCZK'.")
+            
+        except Exception as e:
+            self.chat_output.append(f"<span style='color:red;'>Chyba při spouštění FlexReport skriptu: {e}</span>")
+            print(f"Chyba při spouštění FlexReport skriptu: {e}", file=sys.stderr)
+        finally:
+            if conn:
+                conn.close()
+        
 
     def on_ask_gpt(self):
         """
@@ -352,7 +617,6 @@ class DeltaNeutralApp(QWidget):
                     self.chat_output.append(f"<span style='color:orange;'>Upozornění: Některá data živých pozic jsou neúplná v řádku {r}.</span>")
                     print(f"DEBUG: Skipping incomplete live position row {r}.")
 
-
             if live_positions_data:
                 context_data += "Živé pozice z IB pro vybraný ticker:\n" + "\n".join(live_positions_data)
             else:
@@ -377,7 +641,6 @@ class DeltaNeutralApp(QWidget):
             context_data = "\n(Žádná pozice není vybrána, poskytuji obecnou odpověď bez kontextu pozice.)"
             self.chat_output.append("<span style='color:orange;'>Upozornění: Pro poskytnutí kontextu pro GPT prosím nejprve klikněte na řádek pozice v tabulce 'Otevřené Pozice (Strategie)'.</span>")
 
-
         full_prompt = f"{user_prompt}\n{context_data}"
 
         print("\n--- Odesílám do GPT (celý prompt): ---")
@@ -386,7 +649,6 @@ class DeltaNeutralApp(QWidget):
 
         self.openai_manager.ask_gpt(full_prompt, model)
         self.chat_input.clear()
-
 
     def show_news_for_selected_ticker(self):
         """Otevře okno s novinkami pro vybraný ticker."""
